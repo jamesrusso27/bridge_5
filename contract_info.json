@@ -6,7 +6,7 @@
   "source": {
     "chain": "avax",
     "rpc": "https://api.avax-test.network/ext/bc/C/rpc",
-    "address": "0x32426825984E3A8F071727798A90eaA1e40b83F2",
+    "address": "0x09467BFDdb5e03E7a313f677B9bE4d38B26BECBC",
     "abi": [
       {
         "anonymous": false,
@@ -80,7 +80,7 @@
   "destination": {
     "chain": "bsc",
     "rpc": "https://data-seed-prebsc-1-s1.binance.org:8545/",
-    "address": "0x32426825984E3A8F071727798A90eaA1e40b83F2",
+    "address": "0x71E5B59DaB27B9448f3784eEDb4FaB43c0a9DcF1",
     "abi": [
       {
         "anonymous": false,
