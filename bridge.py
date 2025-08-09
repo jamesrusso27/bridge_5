@@ -39,13 +39,13 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     start_block = latest_block - 5
     
     info = get_contract_info(chain, contract_info)
-    contract_address = info['address']
+    contract_address = Web3.to_checksum_address(info['address'])
     contract_abi = info['abi']
     
-    contract = w3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=contract_abi)
+    contract = w3.eth.contract(address=contract_address, abi=contract_abi)
     
-    warden_key = "0xYOUR_PRIVATE_KEY_HERE"
-    warden_address = "0x24AeA5a1D28f983c2E97096402650d47dF512Ac8"
+    warden_key = "0xc4e13c4c7e72dcd21d03cb35768064c63c8a41d6d98ab4127b4dadbad0190d84"
+    warden_address = Web3.to_checksum_address("0x24AeA5a1D28f983c2E97096402650d47dF512Ac8")
     
     if chain == 'source':
         event_filter = contract.events.Deposit.create_filter(fromBlock=start_block, toBlock='latest')
@@ -60,8 +60,8 @@ def scan_blocks(chain, contract_info="contract_info.json"):
             )
             
             for event in events:
-                token = event['args']['token']
-                recipient = event['args']['recipient']
+                token = Web3.to_checksum_address(event['args']['token'])
+                recipient = Web3.to_checksum_address(event['args']['recipient'])
                 amount = event['args']['amount']
                 
                 nonce = dest_w3.eth.get_transaction_count(warden_address)
@@ -94,8 +94,8 @@ def scan_blocks(chain, contract_info="contract_info.json"):
             )
             
             for event in events:
-                underlying_token = event['args']['underlying_token']
-                recipient = event['args']['to']
+                underlying_token = Web3.to_checksum_address(event['args']['underlying_token'])
+                recipient = Web3.to_checksum_address(event['args']['to'])
                 amount = event['args']['amount']
                 
                 nonce = source_w3.eth.get_transaction_count(warden_address)
