@@ -1,69 +1,116 @@
 from web3 import Web3
+from web3.providers.rpc import HTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
+from datetime import datetime
+import json
+import pandas as pd
 
-FUJI_RPC="https://api.avax-test.network/ext/bc/C/rpc"
-BSC_RPC="https://data-seed-prebsc-1-s1.binance.org:8545/"
-FUJI_CHAIN_ID=43113
-BSC_CHAIN_ID=97
 
-def _w3(url):
-    w3=Web3(Web3.HTTPProvider(url))
-    w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+def connect_to(chain):
+    if chain == 'source':
+        api_url = f"https://api.avax-test.network/ext/bc/C/rpc"
+
+    if chain == 'destination':
+        api_url = f"https://data-seed-prebsc-1-s1.binance.org:8545/"
+
+    if chain in ['source','destination']:
+        w3 = Web3(Web3.HTTPProvider(api_url))
+        w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
     return w3
 
-def _load():
-    import json
-    with open("contract_info.json") as f:
-        j=json.load(f)
-    warden_key=j["warden"]["private_key"]
-    src_addr=Web3.to_checksum_address(j["source"]["address"])
-    dst_addr=Web3.to_checksum_address(j["destination"]["address"])
-    w_src=_w3(FUJI_RPC)
-    w_dst=_w3(BSC_RPC)
-    src=w_src.eth.contract(address=src_addr, abi=j["source"]["abi"])
-    dst=w_dst.eth.contract(address=dst_addr, abi=j["destination"]["abi"])
-    acct_src=w_src.eth.account.from_key(warden_key).address
-    acct_dst=w_dst.eth.account.from_key(warden_key).address
-    return w_src,w_dst,src,dst,warden_key,acct_src,acct_dst
 
-def _send_tx(w3, fn, chain_id, sender, key):
-    tx=fn.build_transaction({
-        "from": sender,
-        "nonce": w3.eth.get_transaction_count(sender),
-        "gasPrice": w3.eth.gas_price,
-        "chainId": chain_id
-    })
+def get_contract_info(chain, contract_info):
     try:
-        tx["gas"]=w3.eth.estimate_gas(tx)
-    except:
-        tx["gas"]=600000
-    signed=w3.eth.account.sign_transaction(tx, key)
-    return w3.eth.send_raw_transaction(signed.rawTransaction)
+        with open(contract_info, 'r')  as f:
+            contracts = json.load(f)
+    except Exception as e:
+        print( f"Failed to read contract info\nPlease contact your instructor\n{e}" )
+        return 0
+    return contracts[chain]
 
-def scan():
-    w_src,w_dst,src,dst,key,acct_src,acct_dst=_load()
-    latest_src=w_src.eth.block_number
-    latest_dst=w_dst.eth.block_number
-    from_src=max(0, latest_src-250)
-    from_dst=max(0, latest_dst-250)
-    try:
-        dep=src.events.Deposit.create_filter(fromBlock=from_src, toBlock="latest").get_all_entries()
-    except:
-        dep=[]
-    for e in dep:
-        t=Web3.to_checksum_address(e["args"]["token"])
-        r=Web3.to_checksum_address(e["args"]["recipient"])
-        a=int(e["args"]["amount"])
-        _send_tx(w_dst, dst.functions.wrap(t, r, a), BSC_CHAIN_ID, acct_dst, key)
-    try:
-        un=dst.events.Unwrap.create_filter(fromBlock=from_dst, toBlock="latest").get_all_entries()
-    except:
-        un=[]
-    for e in un:
-        t=Web3.to_checksum_address(e["args"]["underlying_token"])
-        r=Web3.to_checksum_address(e["args"]["to"])
-        a=int(e["args"]["amount"])
-        _send_tx(w_src, src.functions.withdraw(t, r, a), FUJI_CHAIN_ID, acct_src, key)
 
-if __name__=="__main__":
-    scan()
+def scan_blocks(chain, contract_info="contract_info.json"):
+    if chain not in ['source','destination']:
+        print( f"Invalid chain: {chain}" )
+        return 0
+    
+    w3 = connect_to(chain)
+    latest_block = w3.eth.block_number
+    start_block = latest_block - 5
+    
+    info = get_contract_info(chain, contract_info)
+    contract_address = info['address']
+    contract_abi = info['abi']
+    
+    contract = w3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=contract_abi)
+    
+    warden_key = "e4e13c4c7e72dcd21d03cb35768064c63c8a41d6d98ab4127b4dadbad0190d84"
+    warden_address = "0x24AeA5a1D28f983c2E9709640265047dF512Ac8"
+    
+    if chain == 'source':
+        event_filter = contract.events.Deposit.create_filter(fromBlock=start_block, toBlock='latest')
+        events = event_filter.get_all_entries()
+        
+        if events:
+            dest_w3 = connect_to('destination')
+            dest_info = get_contract_info('destination', contract_info)
+            dest_contract = dest_w3.eth.contract(
+                address=Web3.to_checksum_address(dest_info['address']), 
+                abi=dest_info['abi']
+            )
+            
+            for event in events:
+                token = event['args']['token']
+                recipient = event['args']['recipient']
+                amount = event['args']['amount']
+                
+                nonce = dest_w3.eth.get_transaction_count(warden_address)
+                
+                txn = dest_contract.functions.wrap(
+                    token,
+                    recipient,
+                    amount
+                ).build_transaction({
+                    'chainId': 97,
+                    'gas': 300000,
+                    'gasPrice': dest_w3.to_wei('10', 'gwei'),
+                    'nonce': nonce,
+                })
+                
+                signed_txn = dest_w3.eth.account.sign_transaction(txn, warden_key)
+                tx_hash = dest_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+                dest_w3.eth.wait_for_transaction_receipt(tx_hash)
+    
+    elif chain == 'destination':
+        event_filter = contract.events.Unwrap.create_filter(fromBlock=start_block, toBlock='latest')
+        events = event_filter.get_all_entries()
+        
+        if events:
+            source_w3 = connect_to('source')
+            source_info = get_contract_info('source', contract_info)
+            source_contract = source_w3.eth.contract(
+                address=Web3.to_checksum_address(source_info['address']), 
+                abi=source_info['abi']
+            )
+            
+            for event in events:
+                underlying_token = event['args']['underlying_token']
+                recipient = event['args']['to']
+                amount = event['args']['amount']
+                
+                nonce = source_w3.eth.get_transaction_count(warden_address)
+                
+                txn = source_contract.functions.withdraw(
+                    underlying_token,
+                    recipient,
+                    amount
+                ).build_transaction({
+                    'chainId': 43113,
+                    'gas': 300000,
+                    'gasPrice': source_w3.to_wei('30', 'gwei'),
+                    'nonce': nonce,
+                })
+                
+                signed_txn = source_w3.eth.account.sign_transaction(txn, warden_key)
+                tx_hash = source_w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+                source_w3.eth.wait_for_transaction_receipt(tx_hash)
