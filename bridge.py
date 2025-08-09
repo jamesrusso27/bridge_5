@@ -44,8 +44,8 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     
     contract = w3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=contract_abi)
     
-    warden_key = "e4e13c4c7e72dcd21d03cb35768064c63c8a41d6d98ab4127b4dadbad0190d84"
-    warden_address = "0x24AeA5a1D28f983c2E9709640265047dF512Ac8"
+    warden_key = "0xYOUR_PRIVATE_KEY_HERE"
+    warden_address = "0x24AeA5a1D28f983c2E97096402650d47dF512Ac8"
     
     if chain == 'source':
         event_filter = contract.events.Deposit.create_filter(fromBlock=start_block, toBlock='latest')
