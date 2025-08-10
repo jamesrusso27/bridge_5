@@ -10,7 +10,8 @@ def _w3(url):
     w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
     return w3
 
-def _cs(a): return Web3.to_checksum_address(a)
+def _cs(a):
+    return Web3.to_checksum_address(a)
 
 def _send(w3, fn, pk, chain_id):
     acct = w3.eth.account.from_key(pk)
@@ -22,7 +23,7 @@ def _send(w3, fn, pk, chain_id):
         "chainId": chain_id
     })
     sig = w3.eth.account.sign_transaction(tx, pk)
-    return w3.eth.send_raw_transaction(sig.rawTransaction).hex()
+    return w3.eth.send_raw_transaction(sig.raw_transaction).hex()
 
 def scan_blocks(chain, contract_info="contract_info.json"):
     with open(contract_info) as f:
@@ -37,23 +38,22 @@ def scan_blocks(chain, contract_info="contract_info.json"):
 
     if chain == "source":
         latest = w3s.eth.get_block_number()
-        events = src.events.Deposit.create_filter(from_block=max(0, latest-5), to_block=latest).get_all_entries()
+        events = src.events.Deposit.create_filter(from_block=max(0, latest - 5), to_block=latest).get_all_entries()
         for e in events:
             token = _cs(e["args"]["token"])
-            to    = _cs(e["args"]["recipient"])
-            amt   = int(e["args"]["amount"])
+            to = _cs(e["args"]["recipient"])
+            amt = int(e["args"]["amount"])
             _send(w3d, dst.functions.wrap(token, to, amt), pk, 97)
         return 1
 
     if chain == "destination":
         latest = w3d.eth.get_block_number()
-        events = dst.events.Unwrap.create_filter(from_block=max(0, latest-5), to_block=latest).get_all_entries()
+        events = dst.events.Unwrap.create_filter(from_block=max(0, latest - 5), to_block=latest).get_all_entries()
         for e in events:
             token = _cs(e["args"]["underlying_token"])
-            to    = _cs(e["args"]["to"])
-            amt   = int(e["args"]["amount"])
+            to = _cs(e["args"]["to"])
+            amt = int(e["args"]["amount"])
             _send(w3s, src.functions.withdraw(token, to, amt), pk, 43113)
         return 1
 
-    print("Invalid chain")
     return 0
