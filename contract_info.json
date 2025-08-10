@@ -1,6 +1,7 @@
 {
   "warden_address": "0x24AeA5a1D28f9B3c2E97096402650d47dF512Ac8",
   "warden_private_key": "e4e13c4c7e72dcd21d03cb35768064c63c8a41d6d98ab4127b4dadbad0190d84",
+
   "source": {
     "address": "0xA71DD7E1bA6bF8231A6ae0c5cD870e1340a7c42d",
     "abi": [
@@ -9,15 +10,34 @@
       {"type":"event","name":"Deposit","inputs":[{"name":"token","type":"address","indexed":true,"internalType":"address"},{"name":"recipient","type":"address","indexed":true,"internalType":"address"},{"name":"amount","type":"uint256","indexed":false,"internalType":"uint256"}],"anonymous":false}
     ]
   },
+
   "destination": {
     "address": "0x74E3316bb29DD45fC20528415eC4f07a85630249",
     "abi": [
       {"type":"function","name":"wrapped_tokens","inputs":[{"name":"","type":"address","internalType":"address"}],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
       {"type":"function","name":"underlying_tokens","inputs":[{"name":"","type":"address","internalType":"address"}],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
       {"type":"function","name":"wrap","inputs":[{"name":"_underlying_token","type":"address","internalType":"address"},{"name":"_recipient","type":"address","internalType":"address"},{"name":"_amount","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},
-      {"type":"function","name":"unwrap","inputs":[{"name":"_wrapped_token","type":"address","internalType":"address"},{"name":"_recipient","type":"address","internalType":"address"},{"name":"_amount","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"}
+      {"type":"function","name":"unwrap","inputs":[{"name":"_wrapped_token","type":"address","internalType":"address"},{"name":"_recipient","type":"address","internalType":"address"},{"name":"_amount","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},
+      {"type":"event","name":"Creation","inputs":[
+        {"name":"underlying_token","type":"address","indexed":true,"internalType":"address"},
+        {"name":"wrapped_token","type":"address","indexed":true,"internalType":"address"}
+      ],"anonymous":false},
+      {"type":"event","name":"Wrap","inputs":[
+        {"name":"underlying_token","type":"address","indexed":true,"internalType":"address"},
+        {"name":"wrapped_token","type":"address","indexed":true,"internalType":"address"},
+        {"name":"to","type":"address","indexed":true,"internalType":"address"},
+        {"name":"amount","type":"uint256","indexed":false,"internalType":"uint256"}
+      ],"anonymous":false},
+      {"type":"event","name":"Unwrap","inputs":[
+        {"name":"underlying_token","type":"address","indexed":true,"internalType":"address"},
+        {"name":"wrapped_token","type":"address","indexed":true,"internalType":"address"},
+        {"name":"frm","type":"address","indexed":false,"internalType":"address"},
+        {"name":"to","type":"address","indexed":true,"internalType":"address"},
+        {"name":"amount","type":"uint256","indexed":false,"internalType":"uint256"}
+      ],"anonymous":false}
     ]
   },
+
   "tokens": [
     "0xc677c31AD31F73A5290f5ef067F8CEF8d301e45c",
     "0x0773b81e0524447784CcE1F3808fed6AaA156eC8"
